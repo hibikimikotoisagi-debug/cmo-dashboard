@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><script src="/cmo-dashboard/config.js"></script>
+<meta charset="UTF-8">
+<title>Retention Dashboard — 視聴維持率分析</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
+h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
+.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap; }
+.nav a { color:#6b6355; text-decoration:none; }
+.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
+.section { margin-bottom:20px; }
+.box { background:#fff; border:1px solid #d4c9b0; padding:12px; margin-bottom:8px; }
+.box-title { color:#3d6b38; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #e8e0d0; padding-bottom:4px; }
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; }
+.kpi-card { background:#fff; border:1px solid #d4c9b0; padding:10px; text-align:center; }
+.kpi-label { color:#6b6355; font-size:10px; }
+.kpi-val { font-weight:bold; font-size:16px; color:#1a5fa8; margin-top:3px; }
+.kpi-val.good { color:#2a7a2a; }
+.kpi-val.warn { color:#b07000; }
+.kpi-val.danger { color:#c0392b; }
+.bar-wrap { margin-top:4px; background:#e8e0d0; height:8px; border-radius:4px; overflow:hidden; }
+.bar { height:100%; background:#1a5fa8; border-radius:4px; transition:width 0.4s; }
+.bar.good { background:#2a7a2a; }
+.bar.warn { background:#b07000; }
+.bar.danger { background:#c0392b; }
+.funnel-row { display:flex; align-items:center; padding:6px 0; border-bottom:1px solid #f0ebe0; }
+.funnel-label { min-width:100px; font-size:11px; color:#6b6355; }
+.funnel-bar-wrap { flex:1; background:#e8e0d0; height:16px; border-radius:3px; overflow:hidden; margin:0 8px; }
+.funnel-bar { height:100%; border-radius:3px; transition:width 0.4s; background:#1a5fa8; }
+.funnel-pct { min-width:50px; font-weight:bold; font-size:12px; text-align:right; }
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th { background:#eee8da; color:#3d6b38; padding:6px 8px; text-align:left; border-bottom:1px solid #d4c9b0; }
+td { padding:5px 8px; border-bottom:1px solid #f0ebe0; }
+tr:hover td { background:#fdfbf7; }
+.pending { color:#9b8e7e; font-size:12px; text-align:center; padding:20px; }
+.alert-box { background:#fff5f5; border:1px solid #e0b0b0; padding:8px; font-size:11px; color:#c0392b; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="cmo_index.html">■ 全体</a>
+  <a href="cmo_ad.html">▶ 広告</a>
+  <a href="hook_dashboard.html">▶ Hook分析</a>
+  <a href="retention_dashboard.html" class="active">▶ Retention</a>
+</div>
+
+<h1>📈 Retention Dashboard — 視聴維持率分析</h1>
+
+<div id="status-bar" style="font-size:11px;color:#9b8e7e;margin-bottom:12px;">読込中...</div>
+
+<!-- 平均維持率ファネル -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ 視聴維持率ファネル（全動画平均）</div>
+    <div id="retention-funnel">
+      <div class="pending">Vimeo APIキー待ち — vimeo_agent.py を有効化後に表示</div>
+    </div>
+  </div>
+</div>
+
+<!-- 完視聴率 & 主要KPI -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ 主要KPI</div>
+    <div id="main-kpi" class="kpi-grid">
+      <div class="pending">読込中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- 高維持率・低維持率動画 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+  <div class="box">
+    <div class="box-title">✅ 高維持率TOP5</div>
+    <div id="high-retention"></div>
+  </div>
+  <div class="box">
+    <div class="box-title">⚠️ 低維持率（要改善）</div>
+    <div id="low-retention"></div>
+  </div>
+</div>
+
+<!-- アラート -->
+<div id="alert-section" class="section" style="display:none">
+  <div class="alert-box" id="alerts"></div>
+</div>
+
+<!-- 全動画テーブル -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ 動画別 視聴維持率一覧</div>
+    <div id="video-table"></div>
+  </div>
+</div>
+
+<script>
+const pct = n => n == null ? '-' : n + '%';
+const sec = n => n == null ? '-' : Math.floor(n/60) + 'min' + (n%60) + 's';
+const colorClass = (val, thresholds) => {
+  if (val == null) return '';
+  if (val >= thresholds[1]) return 'good';
+  if (val >= thresholds[0]) return 'warn';
+  return 'danger';
+};
+
+fetch('../analytics/video_retention_latest.json?_=' + Date.now())
+  .then(r => r.json()).then(d => {
+    document.getElementById('status-bar').textContent =
+      `集計日: ${d.date || '-'} | 期間: ${d.period || '-'} | ステータス: ${d._status || '-'}`;
+
+    if (!d || d._status !== 'ok') {
+      const msg = `<div class="pending">${d._note || 'Vimeo APIキー待ち'}<br><br>vimeo_agent.pyを実行後にデータが表示されます</div>`;
+      ['retention-funnel','main-kpi','high-retention','low-retention','video-table'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = msg;
+      });
+      return;
+    }
+
+    const vids = d.videos || [];
+    const avg = key => {
+      const vals = vids.map(v => v[key]).filter(v => v != null);
+      return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10 : null;
+    };
+
+    // ファネル表示
+    const funnelSteps = [
+      ['再生開始',    avg('play_start_rate'),  [85, 95], '#1a5fa8'],
+      ['3秒到達',     avg('reach_3sec'),        [70, 85], '#2a6a8a'],
+      ['5秒到達',     avg('reach_5sec'),        [55, 70], '#3a5a7a'],
+      ['15秒到達',    avg('reach_15sec'),       [40, 55], '#4a4a6a'],
+      ['25%到達',     avg('reach_25pct'),       [35, 50], '#5a3a5a'],
+      ['50%到達',     avg('reach_50pct'),       [25, 40], '#6a2a4a'],
+      ['75%到達',     avg('reach_75pct'),       [20, 35], '#7a1a3a'],
+      ['95%到達',     avg('reach_95pct'),       [15, 28], '#8a0a2a'],
+      ['完視聴',      avg('completion_rate'),   [12, 25], '#c0392b'],
+    ];
+
+    document.getElementById('retention-funnel').innerHTML = funnelSteps.map(([label, val, th, color]) => {
+      const barPct = val != null ? Math.min(100, val) : 0;
+      const cls = colorClass(val, th);
+      const fmtd = pct(val);
+      return `<div class="funnel-row">
+        <div class="funnel-label">${label}</div>
+        <div class="funnel-bar-wrap">
+          <div class="funnel-bar ${cls}" style="width:${barPct}%"></div>
+        </div>
+        <div class="funnel-pct" style="color:${cls==='good'?'#2a7a2a':cls==='warn'?'#b07000':'#c0392b'}">${fmtd}</div>
+      </div>`;
+    }).join('');
+
+    // 主要KPI
+    const s = d.summary || {};
+    const kpis = [
+      ['分析動画数', s.total_videos_analyzed + '本', []],
+      ['平均完視聴率', pct(s.avg_completion_rate), [12, 25]],
+      ['平均3秒到達', pct(avg('reach_3sec')), [70, 85]],
+      ['平均15秒到達', pct(avg('reach_15sec')), [40, 55]],
+      ['平均50%到達', pct(avg('reach_50pct')), [25, 40]],
+      ['CTA到達率', pct(s.avg_cta_click_rate), [5, 15]],
+    ];
+    document.getElementById('main-kpi').innerHTML = kpis.map(([label, val, th]) => {
+      const cls = th.length ? colorClass(parseFloat(val), th) : '';
+      return `<div class="kpi-card">
+        <div class="kpi-label">${label}</div>
+        <div class="kpi-val ${cls}">${val}</div>
+      </div>`;
+    }).join('');
+
+    // 高維持率
+    const highVids = d.top_retention_videos || [];
+    document.getElementById('high-retention').innerHTML = highVids.length
+      ? highVids.map(v => `<div style="padding:4px 0;border-bottom:1px solid #f0ebe0;font-size:11px;">
+          <div style="color:#2a7a2a;font-weight:bold;">${pct(v.completion_rate)}</div>
+          <div style="color:#2c2a26;">${v.title?.substring(0,35)||'-'}</div>
+        </div>`).join('')
+      : '<div class="pending">データなし</div>';
+
+    // 低維持率
+    const lowVids = d.low_retention_videos || [];
+    document.getElementById('low-retention').innerHTML = lowVids.length
+      ? lowVids.map(v => `<div style="padding:4px 0;border-bottom:1px solid #f0ebe0;font-size:11px;">
+          <div style="color:#c0392b;font-weight:bold;">${pct(v.completion_rate)}</div>
+          <div style="color:#2c2a26;">${v.title?.substring(0,35)||'-'}</div>
+          ${v._alert ? `<div style="font-size:10px;color:#c0392b;">${v._alert}</div>` : ''}
+        </div>`).join('')
+      : '<div class="pending">データなし</div>';
+
+    // アラート
+    const alerts = d.alerts || [];
+    if (alerts.length > 0) {
+      document.getElementById('alert-section').style.display = '';
+      document.getElementById('alerts').innerHTML = '🚨 アラート<br>' + alerts.map(a => `・${a}`).join('<br>');
+    }
+
+    // 全動画テーブル
+    const sorted = [...vids].sort((a,b) => (b.completion_rate||0) - (a.completion_rate||0));
+    document.getElementById('video-table').innerHTML = sorted.length ? `
+      <table>
+        <thead><tr>
+          <th>タイトル</th><th>3秒</th><th>15秒</th><th>25%</th><th>50%</th><th>75%</th><th>完視聴</th><th>CTA</th>
+        </tr></thead>
+        <tbody>
+          ${sorted.map(v => {
+            const r3c  = colorClass(v.reach_3sec, [70,85]);
+            const r15c = colorClass(v.reach_15sec, [40,55]);
+            const r50c = colorClass(v.reach_50pct, [25,40]);
+            const rc   = colorClass(v.completion_rate, [12,25]);
+            return `<tr>
+              <td title="${v.title}">${v.title?.substring(0,30)||'-'}</td>
+              <td style="color:${r3c==='good'?'#2a7a2a':r3c==='warn'?'#b07000':'#c0392b'}">${pct(v.reach_3sec)}</td>
+              <td style="color:${r15c==='good'?'#2a7a2a':r15c==='warn'?'#b07000':'#c0392b'}">${pct(v.reach_15sec)}</td>
+              <td>${pct(v.reach_25pct)}</td>
+              <td style="color:${r50c==='good'?'#2a7a2a':r50c==='warn'?'#b07000':'#c0392b'}">${pct(v.reach_50pct)}</td>
+              <td>${pct(v.reach_75pct)}</td>
+              <td style="font-weight:bold;color:${rc==='good'?'#2a7a2a':rc==='warn'?'#b07000':'#c0392b'}">${pct(v.completion_rate)}</td>
+              <td>${pct(v.cta_click_rate)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>` : '<div class="pending">データなし</div>';
+
+  }).catch(() => {
+    ['retention-funnel','main-kpi','high-retention','low-retention','video-table'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<div class="pending">video_retention_latest.jsonが未生成 — vimeo_agent.pyを実行してください</div>';
+    });
+  });
+</script>
+</body>
+</html>

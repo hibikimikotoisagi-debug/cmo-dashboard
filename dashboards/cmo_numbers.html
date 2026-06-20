@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><script src="/cmo-dashboard/config.js"></script>
+<meta charset="UTF-8">
+<title>[SA-3] 数値管理 ダッシュボード</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
+a { color:#1a5fa8; text-decoration:none; }
+a:hover { text-decoration:underline; }
+h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
+.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap; }
+.nav a { color:#6b6355; }
+.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
+.box { background:#ffffff; border:1px solid #d4c9b0; padding:12px; margin-bottom:12px; }
+.box-title { color:#3d6b38; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #e8e0d0; padding-bottom:4px; }
+.blocker-box { border:1px solid #c0392b; background:#fff5f5; }
+.blocker-box .box-title { color:#c0392b; }
+.keizoku-box { border:1px solid #7b5ea7; background:#f8f5ff; }
+.keizoku-box .box-title { color:#7b5ea7; }
+.task-row { padding:4px 0; border-bottom:1px solid #f0ebe0; display:flex; gap:8px; align-items:baseline; }
+.task-row:last-child { border-bottom:none; }
+.tid { color:#8b7d6b; min-width:80px; font-size:11px; }
+.tname { flex:1; }
+.tpri { font-size:11px; color:#a07000; min-width:24px; }
+.towner { color:#8b7d6b; font-size:11px; min-width:60px; text-align:right; }
+.status-完了 { color:#2a7a2a; }
+.status-進行中 { color:#1a5fa8; }
+.status-対応中 { color:#a07000; }
+.status-待機中 { color:#888888; }
+.status-ブロック中 { color:#c0392b; font-weight:bold; }
+.status-未着手 { color:#b0a898; }
+.status-継続 { color:#7b5ea7; }
+.updated { color:#9b8e7e; font-size:11px; margin-bottom:12px; }
+.count-bar { display:flex; gap:12px; font-size:12px; margin-bottom:8px; flex-wrap:wrap; }
+.empty { color:#b0a898; font-size:12px; padding:4px 0; }
+.api-table { width:100%; border-collapse:collapse; font-size:11px; }
+.api-table th { color:#6b6355; text-align:left; padding:4px 6px; border-bottom:1px solid #d4c9b0; background:#f5f0e8; }
+.api-table td { padding:4px 6px; border-bottom:1px solid #ece6d8; }
+.api-ok { color:#2a7a2a; }
+.api-wait { color:#a07000; }
+.api-none { color:#b0a898; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="cmo_index.html">■ 全体</a>
+  <a href="cmo_ad.html">▶ [SA-1] 広告</a>
+  <a href="cmo_sns.html">▶ [SA-2] SNS</a>
+  <a href="cmo_numbers.html" class="active">▶ [SA-3] 数値管理</a>
+  <a href="cmo_funnel.html">▶ [SA-4] 導線構築</a>
+</div>
+<h1>[SA-3] 数値管理サブエージェント</h1>
+<div class="updated" id="updated">読込中...</div>
+<div class="count-bar" id="counts"></div>
+<div class="box">
+  <div class="box-title">━ APIキー連携状況</div>
+  <table class="api-table">
+    <tr><th>データソース</th><th>キーチェーン名</th><th>状態</th></tr>
+    <tr><td>UTAGE</td><td>utage-api-key</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>Google広告</td><td>google-ads-developer-token 他3本</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>ConvertKit（メルマガ）</td><td>convertkit-api-key</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>LINE（スタバ式）</td><td>line-token-staba-1/2</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>LINE（yuuyuuland）</td><td>line-token-yuuyuu-1〜4</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>LINE（Case診断）</td><td>line-token-case-1/2</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>LINE（セミナー）</td><td>line-token-seminar-1/2</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>Meta広告（ME5）</td><td>meta-ads-token-me5</td><td class="api-ok">✅ 保存済（期限2026-08上旬）</td></tr>
+    <tr><td>Meta広告（ME3）</td><td>meta-ads-token-me3</td><td class="api-ok">✅ 保存済（期限2026-08上旬）</td></tr>
+    <tr><td>LINE（Claude Code集客 #1）</td><td>line-token-cc-1</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>LINE（Claude Code集客 #2）</td><td>line-token-cc-2</td><td class="api-ok">✅ 保存済</td></tr>
+    <tr><td>YouTube Analytics</td><td>（未設定）</td><td class="api-none">⬜ 未着手</td></tr>
+  </table>
+</div>
+<div id="blocker-section" style="display:none">
+  <div class="box blocker-box">
+    <div class="box-title">🔴 ブロッカー</div>
+    <div id="blockers"></div>
+  </div>
+</div>
+<div class="box">
+  <div class="box-title">━ 進行中 / 対応中 / 待機中</div>
+  <div id="active-tasks"><span class="empty">なし</span></div>
+</div>
+<div class="box">
+  <div class="box-title">⬜ 未着手</div>
+  <div id="todo-tasks"><span class="empty">なし</span></div>
+</div>
+<div id="keizoku-section" style="display:none">
+  <div class="box keizoku-box">
+    <div class="box-title">🔁 継続タスク（定期実行中）</div>
+    <div id="keizoku-tasks"></div>
+  </div>
+</div>
+<div style="margin-top:12px; color:#9b8e7e; font-size:11px;">
+  path: agents/NUMERICAL_VALUE　|　<a href="https://docs.google.com/spreadsheets/d/1OS6nFrjo39AHvE5rI1lPmOCpRz4zv0nwdQm2SW6fmvc/edit?gid=1948699085" target="_blank">タスク進捗シート</a>
+</div>
+<script>
+const ICON={'完了':'✅','進行中':'🔄','対応中':'🔶','待機中':'🔵','ブロック中':'🔴','未着手':'⬜','継続':'🔁'};
+function icon(s){for(const[k,v] of Object.entries(ICON)) if(s&&s.includes(k)) return v; return '❓';}
+function cls(s){return 'status-'+(Object.keys(ICON).find(k=>s&&s.includes(k))||'未着手');}
+function row(t){return `<div class="task-row"><span class="tid">${t.id}</span><span class="tname ${cls(t.status)}">${icon(t.status)} ${t.name}</span><span class="tpri">${t.priority||''}</span><span class="towner">${t.owner||''}</span></div>`;}
+function countBar(s){
+  const p=[],map={'完了':'✅','進行中':'🔄','対応中':'🔶','待機中':'🔵','ブロック中':'🔴','未着手':'⬜','継続':'🔁'};
+  for(const[k,v] of Object.entries(map)) if(s[k]) p.push(`<span class="status-${k}">${v}${s[k]}</span>`);
+  return p.join(' ');
+}
+fetch('cmo_data.json?_='+Date.now()).then(r=>r.json()).then(d=>{
+  document.getElementById('updated').textContent='更新: '+d.updated;
+  const sa=d.subagents&&d.subagents['数値管理'];
+  if(!sa||!sa.tasks||!sa.tasks.length){document.getElementById('counts').innerHTML='<span class="empty">NV-プレフィックスタスクなし</span>';return;}
+  document.getElementById('counts').innerHTML=countBar(sa.counts||{});
+  const blocked=sa.tasks.filter(t=>t.status&&t.status.includes('ブロック'));
+  const active=sa.tasks.filter(t=>t.status&&(t.status.includes('進行中')||t.status.includes('対応中')||t.status.includes('待機')));
+  const todo=sa.tasks.filter(t=>t.status&&t.status.includes('未着手'));
+  const keizoku=sa.tasks.filter(t=>t.status&&t.status.includes('継続'));
+  if(blocked.length){document.getElementById('blocker-section').style.display='';document.getElementById('blockers').innerHTML=blocked.map(row).join('');}
+  document.getElementById('active-tasks').innerHTML=active.map(row).join('')||'<span class="empty">なし</span>';
+  document.getElementById('todo-tasks').innerHTML=todo.map(row).join('')||'<span class="empty">なし</span>';
+  if(keizoku.length){document.getElementById('keizoku-section').style.display='';document.getElementById('keizoku-tasks').innerHTML=keizoku.map(row).join('');}
+}).catch(e=>{document.getElementById('updated').textContent='エラー: '+e;});
+</script>
+</body>
+</html>

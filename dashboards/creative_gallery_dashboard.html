@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><script src="/cmo-dashboard/config.js"></script>
+<meta charset="UTF-8">
+<title>Creative Gallery — クリエイティブ一覧</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
+h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
+.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:12px; display:flex; gap:16px; flex-wrap:wrap; }
+.nav a { color:#6b6355; text-decoration:none; }
+.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
+.filter-bar { background:#fff; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.filter-bar label { font-size:11px; color:#6b6355; }
+.filter-btn { background:#eee8da; border:1px solid #d4c9b0; padding:3px 10px; cursor:pointer; font-size:11px; border-radius:3px; }
+.filter-btn.active { background:#1a5fa8; color:#fff; border-color:#1a5fa8; }
+.filter-btn.win  { background:#e8f8e8; border-color:#2a7a2a; color:#2a7a2a; }
+.filter-btn.win.active { background:#2a7a2a; color:#fff; }
+.filter-btn.lose { background:#fff0f0; border-color:#c0392b; color:#c0392b; }
+.filter-btn.lose.active { background:#c0392b; color:#fff; }
+select { border:1px solid #d4c9b0; background:#fff; padding:3px 8px; font-size:11px; }
+.gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+.card { background:#fff; border:1px solid #d4c9b0; cursor:pointer; transition:box-shadow .2s; }
+.card:hover { box-shadow:0 2px 8px rgba(0,0,0,.12); }
+.card-img { width:100%; height:120px; object-fit:cover; background:#e8e0d0; display:flex; align-items:center; justify-content:center; color:#9b8e7e; font-size:11px; }
+.card-img img { width:100%; height:100%; object-fit:cover; }
+.card-body { padding:10px; }
+.card-name { font-size:11px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:6px; }
+.card-tags { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:6px; }
+.tag { display:inline-block; padding:1px 5px; border-radius:3px; font-size:10px; font-weight:bold; }
+.tag-win  { background:#e8f8e8; color:#2a7a2a; }
+.tag-ok   { background:#e8f0ff; color:#1a5fa8; }
+.tag-lose { background:#fff0f0; color:#c0392b; }
+.tag-pend { background:#f0f0f0; color:#888; }
+.tag-meta { background:#e8f0ff; color:#1a5fa8; }
+.tag-yt   { background:#fff0e0; color:#b05000; }
+.tag-line { background:#e8ffe8; color:#2a7a2a; }
+.kpi-row { display:flex; gap:6px; font-size:10px; flex-wrap:wrap; margin-bottom:6px; }
+.kpi-chip { background:#f7f4ee; border:1px solid #e8e0d0; padding:2px 6px; border-radius:3px; }
+.kpi-chip strong { color:#1a5fa8; }
+.kpi-chip.roas-win strong { color:#2a7a2a; }
+.kpi-chip.roas-lose strong { color:#c0392b; }
+.card-improve { font-size:10px; color:#6b6355; border-top:1px solid #f0ebe0; padding-top:6px; margin-top:4px; }
+.card-improve span { color:#b05000; font-weight:bold; }
+.review-row { display:flex; gap:4px; margin-top:6px; }
+.review-btn { background:#eee8da; border:1px solid #d4c9b0; padding:2px 8px; cursor:pointer; font-size:10px; border-radius:2px; flex:1; text-align:center; }
+.review-btn:hover { background:#d4c9b0; }
+.review-btn.approved { background:#e8f8e8; border-color:#2a7a2a; color:#2a7a2a; }
+.review-btn.rejected { background:#fff0f0; border-color:#c0392b; color:#c0392b; }
+/* モーダル */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:100; overflow-y:auto; padding:20px; }
+.modal-bg.open { display:flex; align-items:flex-start; justify-content:center; }
+.modal { background:#fff; border:1px solid #d4c9b0; max-width:700px; width:100%; margin:auto; }
+.modal-head { background:#eee8da; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; }
+.modal-head h2 { font-size:13px; }
+.modal-close { cursor:pointer; font-size:18px; color:#6b6355; }
+.modal-body { padding:16px; }
+.modal-img { width:100%; max-height:200px; object-fit:contain; background:#f7f4ee; margin-bottom:12px; }
+.detail-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:12px; }
+.detail-kpi { border:1px solid #d4c9b0; padding:8px; text-align:center; }
+.detail-kpi .label { font-size:10px; color:#6b6355; }
+.detail-kpi .val { font-weight:bold; font-size:16px; margin-top:2px; }
+.detail-section { margin-bottom:12px; }
+.detail-section h3 { font-size:11px; font-weight:bold; color:#3d6b38; border-bottom:1px solid #e8e0d0; padding-bottom:3px; margin-bottom:6px; }
+.detail-list li { font-size:11px; padding:2px 0; }
+.pending { color:#9b8e7e; font-size:12px; text-align:center; padding:24px; }
+#total-count { font-size:11px; color:#6b6355; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="cmo_index.html">■ 全体</a>
+  <a href="roas_by_creative.html">▶ ROAS分析</a>
+  <a href="creative_intelligence_dashboard.html">▶ CI分析</a>
+  <a href="creative_gallery_dashboard.html" class="active">▶ ギャラリー</a>
+  <a href="hook_dashboard.html">▶ Hook分析</a>
+</div>
+
+<h1>🖼 Creative Gallery — クリエイティブ一覧</h1>
+<div id="status-bar" style="font-size:11px;color:#9b8e7e;margin-bottom:8px;">読込中...</div>
+
+<div class="filter-bar">
+  <label>ステータス：</label>
+  <button class="filter-btn active" data-status="all">全て</button>
+  <button class="filter-btn win" data-status="win">✅ 勝ち</button>
+  <button class="filter-btn" data-status="ok">○ 及第</button>
+  <button class="filter-btn lose" data-status="lose">🛑 負け</button>
+  <button class="filter-btn" data-status="pending">保留</button>
+  &nbsp;
+  <label>チャネル：</label>
+  <button class="filter-btn active" data-ch="all">全て</button>
+  <button class="filter-btn" data-ch="meta">Meta</button>
+  <button class="filter-btn" data-ch="youtube">YouTube</button>
+  <button class="filter-btn" data-ch="line">LINE</button>
+  &nbsp;
+  <label>並び替え：</label>
+  <select id="sort-key">
+    <option value="roas">ROAS順</option>
+    <option value="revenue">売上順</option>
+    <option value="attendance_rate">着席率順</option>
+    <option value="conv_rate">成約率順</option>
+    <option value="spend">広告費順</option>
+  </select>
+</div>
+
+<div id="total-count"></div>
+<div id="gallery" class="gallery"><div class="pending">読込中...</div></div>
+
+<!-- 詳細モーダル -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">詳細</h2>
+      <span class="modal-close" onclick="closeModal()">✕</span>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const fmt = n => n == null ? '-' : '¥' + Math.round(n).toLocaleString('ja-JP');
+const pct = n => n == null ? '-' : n.toFixed(1) + '%';
+const colorRoas = v => v == null ? '' : v >= 500 ? 'roas-win' : v < 300 ? 'roas-lose' : '';
+const tagStatus = s => {
+  const m = {win:'✅ 勝ち',ok:'○ 及第',lose:'🛑 負け',pending:'保留'}[s]||s;
+  const c = {win:'tag-win',ok:'tag-ok',lose:'tag-lose',pending:'tag-pend'}[s]||'tag-pend';
+  return `<span class="tag ${c}">${m}</span>`;
+};
+const tagCh = ch => {
+  if (ch==='meta') return '<span class="tag tag-meta">Meta</span>';
+  if (ch==='youtube') return '<span class="tag tag-yt">YT</span>';
+  if (ch==='line') return '<span class="tag tag-line">LINE</span>';
+  return ch ? `<span class="tag" style="background:#f0f0f0;color:#666">${ch}</span>` : '';
+};
+const shortName = name => {
+  const m = name.match(/[（(]([^）)]+)[）)]/);
+  return m ? m[1] : name.substring(0,28);
+};
+
+let allCreatives = [];
+let activeStatus = 'all';
+let activeCh = 'all';
+let reviewLog = { reviews: [] };
+
+try { reviewLog = JSON.parse(localStorage.getItem('creative_review_log') || '{"reviews":[]}'); } catch(e) {}
+
+fetch('../analytics/creative_intelligence_latest.json?_=' + Date.now())
+  .then(r => r.json())
+  .then(d => {
+    allCreatives = d.creatives || [];
+    const s = d.summary || {};
+    document.getElementById('status-bar').textContent =
+      `集計日: ${d.date} | 全${s.total}件 | 勝ち${s.win} 及第${s.ok} 負け${s.lose} 保留${s.pending}`;
+    render();
+  })
+  .catch(() => {
+    document.getElementById('gallery').innerHTML =
+      '<div class="pending">creative_intelligence_agent.pyを実行してください</div>';
+  });
+
+// フィルターイベント
+document.querySelectorAll('[data-status]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeStatus = btn.dataset.status;
+    render();
+  });
+});
+document.querySelectorAll('[data-ch]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-ch]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeCh = btn.dataset.ch;
+    render();
+  });
+});
+document.getElementById('sort-key').addEventListener('change', render);
+
+function getVal(c, key) {
+  if (key === 'roas') return c.sales?.roas || 0;
+  if (key === 'revenue') return c.sales?.revenue || 0;
+  if (key === 'attendance_rate') return c.seminar?.attendance_rate || 0;
+  if (key === 'conv_rate') return c.sales?.conversion_rate || 0;
+  if (key === 'spend') return c.ad?.spend || 0;
+  return 0;
+}
+
+function render() {
+  const sortKey = document.getElementById('sort-key').value;
+  let list = [...allCreatives];
+  if (activeStatus !== 'all') list = list.filter(c => c.analysis?.status === activeStatus);
+  if (activeCh !== 'all') list = list.filter(c => c.channel === activeCh);
+  list.sort((a,b) => getVal(b,sortKey) - getVal(a,sortKey));
+
+  document.getElementById('total-count').textContent = `${list.length}件表示`;
+
+  if (!list.length) {
+    document.getElementById('gallery').innerHTML = '<div class="pending">該当なし</div>';
+    return;
+  }
+
+  document.getElementById('gallery').innerHTML = list.map((c, i) => {
+    const roas = c.sales?.roas;
+    const rc = colorRoas(roas);
+    const improve = (c.analysis?.improvements || [])[0] || '';
+    const reviewEntry = reviewLog.reviews?.find(r => r.item_id === c.ad_code);
+    const reviewStatus = reviewEntry?.status || '';
+
+    return `<div class="card" onclick="openModal(${i})">
+      <div class="card-img">
+        ${c.ad?.creative_url
+          ? `<img src="${c.ad.creative_url}" alt="${c.ad_code}" onerror="this.parentNode.innerHTML='<span>${c.ad_code||'画像なし'}</span>'">`
+          : `<span>${c.ad_code || '画像データなし'}</span>`}
+      </div>
+      <div class="card-body">
+        <div class="card-name" title="${c.name}">${shortName(c.name)}</div>
+        <div class="card-tags">
+          ${tagStatus(c.analysis?.status)}
+          ${tagCh(c.channel)}
+        </div>
+        <div class="kpi-row">
+          <div class="kpi-chip ${rc}">ROAS <strong>${pct(roas)}</strong></div>
+          <div class="kpi-chip">着席 <strong>${pct(c.seminar?.attendance_rate)}</strong></div>
+          <div class="kpi-chip">成約 <strong>${pct(c.sales?.conversion_rate)}</strong></div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi-chip">費 <strong>${c.ad?.spend ? '¥'+(c.ad.spend/10000).toFixed(0)+'万' : '-'}</strong></div>
+          <div class="kpi-chip">売上 <strong>${c.sales?.revenue ? '¥'+(c.sales.revenue/10000).toFixed(0)+'万' : '-'}</strong></div>
+          <div class="kpi-chip">CPL <strong>${fmt(c.ad?.cpl)}</strong></div>
+        </div>
+        ${improve ? `<div class="card-improve"><span>📌</span> ${improve.substring(0,50)}</div>` : ''}
+        <div class="review-row">
+          <button class="review-btn ${reviewStatus==='approved'?'approved':''}"
+            onclick="event.stopPropagation();doReview('${c.ad_code}','${shortName(c.name).replace(/'/g,'`')}','approved',this)">採用</button>
+          <button class="review-btn ${reviewStatus==='rejected'?'rejected':''}"
+            onclick="event.stopPropagation();doReview('${c.ad_code}','${shortName(c.name).replace(/'/g,'`')}','rejected',this)">却下</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // グローバルに保持
+  window._galleryList = list;
+}
+
+function openModal(idx) {
+  const c = window._galleryList[idx];
+  if (!c) return;
+  document.getElementById('modal-title').textContent = shortName(c.name);
+  const roas = c.sales?.roas;
+  const rc = roas >= 500 ? '#2a7a2a' : roas >= 300 ? '#b07000' : '#c0392b';
+
+  document.getElementById('modal-body').innerHTML = `
+    <div style="margin-bottom:8px;">${tagStatus(c.analysis?.status)} ${tagCh(c.channel)} <span style="font-size:10px;color:#9b8e7e;">${c.ad_code || ''}</span></div>
+
+    <div class="detail-grid">
+      <div class="detail-kpi"><div class="label">ROAS</div><div class="val" style="color:${rc}">${pct(roas)}</div></div>
+      <div class="detail-kpi"><div class="label">着席率</div><div class="val">${pct(c.seminar?.attendance_rate)}</div></div>
+      <div class="detail-kpi"><div class="label">成約率</div><div class="val">${pct(c.sales?.conversion_rate)}</div></div>
+      <div class="detail-kpi"><div class="label">広告費</div><div class="val" style="font-size:13px;">${fmt(c.ad?.spend)}</div></div>
+      <div class="detail-kpi"><div class="label">売上</div><div class="val" style="font-size:13px;">${fmt(c.sales?.revenue)}</div></div>
+      <div class="detail-kpi"><div class="label">CPL</div><div class="val" style="font-size:13px;">${fmt(c.ad?.cpl)}</div></div>
+      <div class="detail-kpi"><div class="label">申込数</div><div class="val">${c.seminar?.apply_count ?? '-'}</div></div>
+      <div class="detail-kpi"><div class="label">着席数</div><div class="val">${c.seminar?.attendance_count ?? '-'}</div></div>
+      <div class="detail-kpi"><div class="label">成約数</div><div class="val">${c.sales?.conversion_count ?? '-'}</div></div>
+      <div class="detail-kpi"><div class="label">Hook Score</div><div class="val">${c.ad?.hook_score?.toFixed(2) ?? '-'}</div></div>
+      <div class="detail-kpi"><div class="label">CPO</div><div class="val" style="font-size:13px;">${fmt(c.sales?.cpo)}</div></div>
+      <div class="detail-kpi"><div class="label">着席単価</div><div class="val" style="font-size:13px;">${fmt(c.seminar?.attendance_cpa)}</div></div>
+    </div>
+
+    ${c.analysis?.win_factors?.length ? `
+      <div class="detail-section">
+        <h3>✅ 勝ち要因</h3>
+        <ul class="detail-list">${c.analysis.win_factors.map(f=>`<li>・${f}</li>`).join('')}</ul>
+      </div>` : ''}
+
+    ${c.analysis?.lose_factors?.length ? `
+      <div class="detail-section">
+        <h3>🛑 負け要因</h3>
+        <ul class="detail-list">${c.analysis.lose_factors.map(f=>`<li>・${f}</li>`).join('')}</ul>
+      </div>` : ''}
+
+    ${c.analysis?.improvements?.length ? `
+      <div class="detail-section">
+        <h3>💡 改善提案</h3>
+        <ul class="detail-list">${c.analysis.improvements.map(f=>`<li>・${f}</li>`).join('')}</ul>
+      </div>` : ''}
+
+    <div class="detail-section" style="font-size:10px;color:#9b8e7e;border-top:1px solid #f0ebe0;padding-top:8px;">
+      状態 — GA4: ${c.lp?._status || '-'} | Kit: ${c.email?._status || '-'} | LINE: ${c.line?._status || '-'}
+    </div>
+
+    <div class="review-row" style="margin-top:12px;">
+      <button class="review-btn" style="flex:1;padding:6px;" onclick="doReview('${c.ad_code}','${shortName(c.name).replace(/'/g,'`')}','approved',this)">✅ 採用（横展開）</button>
+      <button class="review-btn" style="flex:1;padding:6px;" onclick="doReview('${c.ad_code}','${shortName(c.name).replace(/'/g,'`')}','rejected',this)">🛑 停止</button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+function doReview(adCode, name, status, btn) {
+  if (!reviewLog.reviews) reviewLog.reviews = [];
+  reviewLog.reviews = reviewLog.reviews.filter(r => r.item_id !== adCode);
+  reviewLog.reviews.push({
+    date: new Date().toISOString().substring(0,16),
+    type: 'creative', item_id: adCode, text: name, status
+  });
+  try { localStorage.setItem('creative_review_log', JSON.stringify(reviewLog)); } catch(e) {}
+  render();
+  if (status === 'approved') {
+    btn.className = 'review-btn approved';
+    btn.textContent = '✅ 採用済み';
+  } else {
+    btn.className = 'review-btn rejected';
+    btn.textContent = '🛑 停止済み';
+  }
+}
+</script>
+</body>
+</html>

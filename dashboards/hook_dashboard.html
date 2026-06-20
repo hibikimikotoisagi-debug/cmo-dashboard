@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><script src="/cmo-dashboard/config.js"></script>
+<meta charset="UTF-8">
+<title>Hook Dashboard — 冒頭フック分析</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
+h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
+.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap; }
+.nav a { color:#6b6355; text-decoration:none; }
+.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
+.section { margin-bottom:20px; }
+.box { background:#fff; border:1px solid #d4c9b0; padding:12px; margin-bottom:8px; }
+.box-title { color:#3d6b38; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #e8e0d0; padding-bottom:4px; }
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; }
+.kpi-card { background:#fff; border:1px solid #d4c9b0; padding:10px; text-align:center; }
+.kpi-label { color:#6b6355; font-size:10px; }
+.kpi-val { font-weight:bold; font-size:16px; color:#1a5fa8; margin-top:3px; }
+.kpi-val.warn { color:#b07000; }
+.kpi-val.danger { color:#c0392b; }
+.kpi-val.good { color:#2a7a2a; }
+.bar-wrap { margin-top:4px; background:#e8e0d0; height:6px; border-radius:3px; overflow:hidden; }
+.bar { height:100%; background:#1a5fa8; border-radius:3px; transition:width 0.4s; }
+.bar.warn { background:#b07000; }
+.bar.danger { background:#c0392b; }
+.bar.good { background:#2a7a2a; }
+table { width:100%; border-collapse:collapse; font-size:11px; }
+th { background:#eee8da; color:#3d6b38; padding:6px 8px; text-align:left; border-bottom:1px solid #d4c9b0; }
+td { padding:5px 8px; border-bottom:1px solid #f0ebe0; }
+tr:hover td { background:#fdfbf7; }
+.tag { display:inline-block; padding:1px 6px; border-radius:3px; font-size:10px; font-weight:bold; }
+.tag-video { background:#e8f0ff; color:#1a5fa8; }
+.tag-image { background:#e8f8e8; color:#2a7a2a; }
+.alert-box { background:#fff5f5; border:1px solid #e0b0b0; padding:8px; font-size:11px; color:#c0392b; margin-bottom:8px; }
+.pending { color:#9b8e7e; font-size:12px; text-align:center; padding:20px; }
+.score-bar { display:flex; align-items:center; gap:8px; }
+.score-num { min-width:50px; text-align:right; font-weight:bold; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="cmo_index.html">■ 全体</a>
+  <a href="cmo_ad.html">▶ 広告</a>
+  <a href="hook_dashboard.html" class="active">▶ Hook分析</a>
+  <a href="retention_dashboard.html">▶ Retention</a>
+</div>
+
+<h1>🎣 Hook Dashboard — 冒頭フック分析</h1>
+
+<div id="status-bar" style="font-size:11px;color:#9b8e7e;margin-bottom:12px;">読込中...</div>
+
+<!-- 平均到達率 -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ 平均到達率（Vimeo視聴データ）</div>
+    <div id="reach-grid" class="kpi-grid">
+      <div class="pending">Vimeo APIキー待ち — vimeo_agent.py を有効化後に表示</div>
+    </div>
+  </div>
+</div>
+
+<!-- Hook Score ランキング（Meta Ads） -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ Hook Score ランキング（Meta広告）</div>
+    <div id="hook-rank">
+      <div class="pending">読込中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- Creative Type 比較 -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ 動画 vs 画像 クリエイティブ比較</div>
+    <div id="type-compare">
+      <div class="pending">読込中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- アラート -->
+<div class="section" id="alert-section" style="display:none">
+  <div class="alert-box" id="alerts"></div>
+</div>
+
+<!-- 全広告テーブル -->
+<div class="section">
+  <div class="box">
+    <div class="box-title">━ 広告別 Hook Score 一覧</div>
+    <div id="ad-table"></div>
+  </div>
+</div>
+
+<script>
+const fmt = n => n == null ? '-' : '¥' + Math.round(n).toLocaleString('ja-JP');
+const pct = n => n == null ? '-' : n + '%';
+const colorClass = (val, thresholds) => {
+  if (val == null) return '';
+  if (val >= thresholds[1]) return 'good';
+  if (val >= thresholds[0]) return 'warn';
+  return 'danger';
+};
+
+// Vimeo Retention データ（到達率）
+fetch('../analytics/video_retention_latest.json?_=' + Date.now())
+  .then(r => r.json()).then(d => {
+    if (!d || d._status !== 'ok') {
+      document.getElementById('reach-grid').innerHTML =
+        `<div class="pending">Vimeo APIキー待ち — ${d._note || 'APIキーをKeychain登録後に自動取得'}</div>`;
+      return;
+    }
+    const vids = d.videos || [];
+    const avg = key => {
+      const vals = vids.map(v => v[key]).filter(v => v != null);
+      return vals.length ? Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*10)/10 : null;
+    };
+    const checkpoints = [
+      ['1秒到達率',  avg('reach_1sec'),   [85, 95]],
+      ['3秒到達率',  avg('reach_3sec'),   [70, 85]],
+      ['5秒到達率',  avg('reach_5sec'),   [55, 70]],
+      ['10秒到達率', avg('reach_10sec'),  [45, 60]],
+      ['15秒到達率', avg('reach_15sec'),  [40, 55]],
+    ];
+    document.getElementById('reach-grid').innerHTML = checkpoints.map(([label, val, th]) => {
+      const cls = colorClass(val, th);
+      const barW = val != null ? Math.min(100, val) : 0;
+      return `<div class="kpi-card">
+        <div class="kpi-label">${label}</div>
+        <div class="kpi-val ${cls}">${pct(val)}</div>
+        <div class="bar-wrap"><div class="bar ${cls}" style="width:${barW}%"></div></div>
+      </div>`;
+    }).join('');
+  }).catch(() => {});
+
+// Meta Creative データ
+fetch('../analytics/meta_creative_latest.json?_=' + Date.now())
+  .then(r => r.json()).then(d => {
+    document.getElementById('status-bar').textContent = `集計日: ${d.date || '-'} | 分析広告数: ${d.summary?.total_ads_analyzed || 0}件 | 総広告費(7d): ${fmt(d.summary?.total_spend_7d)}`;
+
+    // Hook Score ランキング
+    const topHooks = d.top_creatives_by_hook_score || [];
+    if (topHooks.length === 0) {
+      document.getElementById('hook-rank').innerHTML = '<div class="pending">データなし（meta_creative_agent.pyを実行してください）</div>';
+    } else {
+      const maxScore = Math.max(...topHooks.map(a => a.hook_score || 0), 1);
+      document.getElementById('hook-rank').innerHTML = `
+        <div style="font-size:11px;color:#6b6355;margin-bottom:8px;">Hook Score = CTR/CPM × 10000（高いほど効率的なフック）</div>
+        ${topHooks.map((a, i) => `
+          <div style="margin-bottom:8px;padding:8px;background:#fafaf7;border:1px solid #e8e0d0;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+              <span style="font-weight:bold;color:#3d6b38;">#${i+1}</span>
+              <span class="tag tag-${a.creative_type}">${a.creative_type}</span>
+              <span style="flex:1;font-size:11px;">${a.ad_name?.substring(0,45) || '-'}</span>
+              <span style="color:#6b6355;font-size:10px;">${a.account_name || ''}</span>
+            </div>
+            <div class="score-bar">
+              <span style="font-size:10px;color:#6b6355;min-width:120px;">Hook Score: <strong>${a.hook_score}</strong></span>
+              <div class="bar-wrap" style="flex:1"><div class="bar good" style="width:${Math.round(a.hook_score/maxScore*100)}%"></div></div>
+            </div>
+            <div style="font-size:10px;color:#6b6355;margin-top:4px;">
+              CPM: ${fmt(a.cpm_7d)} | CTR: ${a.ctr_7d}% | リード: ${a.leads_7d}件 | CPL: ${fmt(a.cpl_7d)}
+            </div>
+          </div>
+        `).join('')}`;
+    }
+
+    // Creative Type 比較
+    const byType = d.by_creative_type || {};
+    const video = byType.video || {};
+    const image = byType.image || {};
+    const best = video.cpl && image.cpl ? (video.cpl < image.cpl ? 'video' : 'image') : '-';
+    document.getElementById('type-compare').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="kpi-card" style="${best==='video'?'border:2px solid #2a7a2a;':''}" >
+          <div class="kpi-label">🎥 動画クリエイティブ</div>
+          <div style="font-size:11px;margin-top:6px;">広告費: ${fmt(video.spend)}</div>
+          <div style="font-size:11px;">リード: ${video.leads||0}件</div>
+          <div style="font-size:14px;font-weight:bold;color:${best==='video'?'#2a7a2a':'#1a5fa8'};margin-top:4px;">CPL ${fmt(video.cpl)}</div>
+          <div style="font-size:11px;color:#6b6355;">CPM: ${fmt(video.cpm_avg)}</div>
+          ${best==='video'?'<div style="font-size:10px;color:#2a7a2a;margin-top:4px;font-weight:bold;">✓ 優位</div>':''}
+        </div>
+        <div class="kpi-card" style="${best==='image'?'border:2px solid #2a7a2a;':''}" >
+          <div class="kpi-label">🖼 画像クリエイティブ</div>
+          <div style="font-size:11px;margin-top:6px;">広告費: ${fmt(image.spend)}</div>
+          <div style="font-size:11px;">リード: ${image.leads||0}件</div>
+          <div style="font-size:14px;font-weight:bold;color:${best==='image'?'#2a7a2a':'#1a5fa8'};margin-top:4px;">CPL ${fmt(image.cpl)}</div>
+          <div style="font-size:11px;color:#6b6355;">CPM: ${fmt(image.cpm_avg)}</div>
+          ${best==='image'?'<div style="font-size:10px;color:#2a7a2a;margin-top:4px;font-weight:bold;">✓ 優位</div>':''}
+        </div>
+      </div>`;
+
+    // アラート
+    const alerts = d.alerts || [];
+    if (alerts.length > 0) {
+      document.getElementById('alert-section').style.display = '';
+      document.getElementById('alerts').innerHTML = '🚨 アラート<br>' + alerts.map(a => `・${a}`).join('<br>');
+    }
+
+    // 全広告テーブル
+    const allAds = [];
+    Object.values(d.accounts || {}).forEach(acc => {
+      (acc.ads || []).forEach(a => allAds.push({...a, _acc: acc.name}));
+    });
+    allAds.sort((a,b) => (b.hook_score||0) - (a.hook_score||0));
+
+    if (allAds.length === 0) {
+      document.getElementById('ad-table').innerHTML = '<div class="pending">データなし</div>';
+    } else {
+      document.getElementById('ad-table').innerHTML = `
+        <table>
+          <thead><tr>
+            <th>広告名</th><th>タイプ</th><th>Hook Score</th><th>CPM</th><th>CTR</th><th>リード</th><th>CPL</th>
+          </tr></thead>
+          <tbody>
+            ${allAds.slice(0,30).map(a => {
+              const hc = a.hook_score >= 1 ? 'good' : a.hook_score >= 0.3 ? 'warn' : 'danger';
+              const cc = a.cpl_7d == null ? '' : a.cpl_7d > 2000 ? 'danger' : a.cpl_7d > 1000 ? 'warn' : 'good';
+              return `<tr>
+                <td title="${a.ad_name}">${a.ad_name?.substring(0,35)||'-'}</td>
+                <td><span class="tag tag-${a.creative_type}">${a.creative_type}</span></td>
+                <td style="font-weight:bold;color:${hc==='good'?'#2a7a2a':hc==='warn'?'#b07000':'#c0392b'}">${a.hook_score||0}</td>
+                <td>${fmt(a.cpm_7d)}</td>
+                <td>${a.ctr_7d||0}%</td>
+                <td>${a.leads_7d||0}</td>
+                <td style="color:${cc==='good'?'#2a7a2a':cc==='warn'?'#b07000':'#c0392b'}">${fmt(a.cpl_7d)}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+  }).catch(() => {
+    document.getElementById('status-bar').textContent = 'meta_creative_latest.jsonが未生成 — meta_creative_agent.pyを実行してください';
+    document.getElementById('hook-rank').innerHTML = '<div class="pending">meta_creative_agent.pyを実行してデータを生成してください</div>';
+  });
+</script>
+</body>
+</html>

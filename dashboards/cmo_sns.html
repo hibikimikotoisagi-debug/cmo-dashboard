@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head><script src="/cmo-dashboard/config.js"></script>
+<meta charset="UTF-8">
+<title>[SA-2] SNS ダッシュボード</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
+a { color:#1a5fa8; text-decoration:none; }
+a:hover { text-decoration:underline; }
+h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
+.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap; }
+.nav a { color:#6b6355; }
+.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
+.channel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-bottom:12px; }
+.box { background:#ffffff; border:1px solid #d4c9b0; padding:12px; }
+.box-title { color:#3d6b38; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #e8e0d0; padding-bottom:4px; }
+.blocker-box { border:1px solid #c0392b; background:#fff5f5; margin-bottom:12px; }
+.blocker-box .box-title { color:#c0392b; }
+.keizoku-box { border:1px solid #7b5ea7; background:#f8f5ff; margin-top:12px; }
+.keizoku-box .box-title { color:#7b5ea7; }
+.task-row { padding:3px 0; border-bottom:1px solid #f0ebe0; display:flex; gap:6px; align-items:baseline; }
+.task-row:last-child { border-bottom:none; }
+.tid { color:#8b7d6b; min-width:70px; font-size:11px; }
+.tname { flex:1; font-size:12px; }
+.towner { color:#8b7d6b; font-size:10px; min-width:50px; text-align:right; }
+.status-完了 { color:#2a7a2a; }
+.status-進行中 { color:#1a5fa8; }
+.status-対応中 { color:#a07000; }
+.status-待機中 { color:#888888; }
+.status-ブロック中 { color:#c0392b; font-weight:bold; }
+.status-未着手 { color:#b0a898; }
+.status-継続 { color:#7b5ea7; }
+.updated { color:#9b8e7e; font-size:11px; margin-bottom:12px; }
+.count-mini { font-size:10px; color:#6b6355; margin-bottom:6px; }
+.empty { color:#b0a898; font-size:11px; }
+</style>
+</head>
+<body>
+<div class="nav">
+  <a href="cmo_index.html">■ 全体</a>
+  <a href="cmo_ad.html">▶ [SA-1] 広告</a>
+  <a href="cmo_sns.html" class="active">▶ [SA-2] SNS</a>
+  <a href="cmo_numbers.html">▶ [SA-3] 数値管理</a>
+  <a href="cmo_funnel.html">▶ [SA-4] 導線構築</a>
+</div>
+<h1>[SA-2] SNS サブエージェント</h1>
+<div class="updated" id="updated">読込中...</div>
+<div id="blocker-section" style="display:none">
+  <div class="box blocker-box">
+    <div class="box-title">🔴 ブロッカー（全SNSチャネル）</div>
+    <div id="blockers"></div>
+  </div>
+</div>
+<div class="channel-grid" id="channels"></div>
+<div id="keizoku-section" style="display:none">
+  <div class="box keizoku-box">
+    <div class="box-title">🔁 継続タスク（全SNS・定期実行中）</div>
+    <div id="keizoku-tasks"></div>
+  </div>
+</div>
+<div style="margin-top:12px; color:#9b8e7e; font-size:11px;">
+  path: agents/SNS_AI_SHUKYAKU　|　<a href="https://docs.google.com/spreadsheets/d/1OS6nFrjo39AHvE5rI1lPmOCpRz4zv0nwdQm2SW6fmvc/edit?gid=219945346" target="_blank">SNSエージェント構造シート</a>
+</div>
+<script>
+const ICON={'完了':'✅','進行中':'🔄','対応中':'🔶','待機中':'🔵','ブロック中':'🔴','未着手':'⬜','継続':'🔁'};
+const SNS_KEYS=['SNS / YouTube','SNS / Instagram','SNS / Threads','SNS / 毒親'];
+function icon(s){for(const[k,v] of Object.entries(ICON)) if(s&&s.includes(k)) return v; return '❓';}
+function cls(s){return 'status-'+(Object.keys(ICON).find(k=>s&&s.includes(k))||'未着手');}
+function row(t){return `<div class="task-row"><span class="tid">${t.id}</span><span class="tname ${cls(t.status)}">${icon(t.status)} ${t.name}</span><span class="towner">${t.owner||''}</span></div>`;}
+function countMini(s){
+  const p=[],map={'進行中':'🔄','ブロック中':'🔴','未着手':'⬜','継続':'🔁','完了':'✅'};
+  for(const[k,v] of Object.entries(map)) if(s[k]) p.push(`${v}${s[k]}`);
+  return p.join(' ');
+}
+fetch('cmo_data.json?_='+Date.now()).then(r=>r.json()).then(d=>{
+  document.getElementById('updated').textContent='更新: '+d.updated;
+  const allBlocked=[],allKeizoku=[];
+  const grid=document.getElementById('channels');
+  for(const key of SNS_KEYS){
+    const sa=d.subagents&&d.subagents[key];
+    const tasks=(sa&&sa.tasks)||[];
+    const blocked=tasks.filter(t=>t.status&&t.status.includes('ブロック'));
+    const keizoku=tasks.filter(t=>t.status&&t.status.includes('継続'));
+    const active=tasks.filter(t=>t.status&&(t.status.includes('進行中')||t.status.includes('対応中')||t.status.includes('待機')));
+    const todo=tasks.filter(t=>t.status&&t.status.includes('未着手'));
+    allBlocked.push(...blocked);
+    allKeizoku.push(...keizoku);
+    const div=document.createElement('div');
+    div.className='box';
+    const nonKeizoku=[...blocked,...active,...todo];
+    div.innerHTML=`<div class="box-title">${key.replace('SNS / ','📣 ')}</div>
+      <div class="count-mini">${countMini((sa&&sa.counts)||{})}</div>
+      ${nonKeizoku.length?nonKeizoku.map(row).join(''):'<span class="empty">タスクなし</span>'}`;
+    grid.appendChild(div);
+  }
+  if(allBlocked.length){
+    document.getElementById('blocker-section').style.display='';
+    document.getElementById('blockers').innerHTML=allBlocked.map(row).join('');
+  }
+  if(allKeizoku.length){
+    document.getElementById('keizoku-section').style.display='';
+    document.getElementById('keizoku-tasks').innerHTML=allKeizoku.map(row).join('');
+  }
+}).catch(e=>{document.getElementById('updated').textContent='エラー: '+e;});
+</script>
+</body>
+</html>
