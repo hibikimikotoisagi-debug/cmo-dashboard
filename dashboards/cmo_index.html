@@ -1,335 +1,328 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><script src="/cmo-dashboard/config.js"></script>
+<head>
 <meta charset="UTF-8">
-<title>CMOハーネス 全体ダッシュボード</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CMO ダッシュボード</title>
+<script src="config.js"></script>
 <style>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
+  --accent: #2563eb;
+  --red: #dc2626;
+  --red-bg: #fef2f2;
+  --amber: #d97706;
+  --amber-bg: #fffbeb;
+  --green: #16a34a;
+  --green-bg: #f0fdf4;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08);
+}
 * { margin:0; padding:0; box-sizing:border-box; }
-body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
-a { color:#1a5fa8; text-decoration:none; }
-a:hover { text-decoration:underline; }
-h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
-.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap; }
-.nav a { color:#6b6355; }
-.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
-.section { margin-bottom:20px; }
-.box { background:#ffffff; border:1px solid #d4c9b0; padding:12px; margin-bottom:8px; }
-.box-title { color:#3d6b38; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #e8e0d0; padding-bottom:4px; }
-.summary-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px; margin-bottom:16px; }
-.sa-card { background:#ffffff; border:1px solid #d4c9b0; padding:10px; }
-.sa-card .name { color:#1a5fa8; font-weight:bold; margin-bottom:6px; font-size:12px; }
-.sa-card .counts { color:#6b6355; font-size:11px; }
-.sa-card .counts span { margin-right:8px; }
-.sa-card a { display:block; margin-top:6px; font-size:11px; color:#1a5fa8; }
-.task-row { padding:4px 0; border-bottom:1px solid #f0ebe0; display:flex; gap:8px; align-items:baseline; }
+body { background:var(--bg); color:var(--text-primary); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif; font-size:14px; line-height:1.5; }
+
+/* NAV */
+.topbar { background:#1e293b; color:#e2e8f0; padding:0 20px; display:flex; align-items:center; gap:0; min-height:44px; overflow-x:auto; white-space:nowrap; }
+.topbar .brand { font-size:13px; font-weight:700; color:#f1f5f9; margin-right:24px; flex-shrink:0; }
+.topbar a { color:#94a3b8; font-size:12px; padding:12px 12px; text-decoration:none; display:inline-block; border-bottom:2px solid transparent; }
+.topbar a:hover, .topbar a.active { color:#f1f5f9; border-bottom-color:#3b82f6; }
+
+/* MAIN */
+.main { max-width:1100px; margin:0 auto; padding:20px 16px; }
+
+/* ALERT BANNER */
+.alert-banner { background:var(--red-bg); border:1px solid #fca5a5; border-radius:var(--radius); padding:12px 16px; margin-bottom:20px; }
+.alert-banner .alert-head { color:var(--red); font-weight:700; font-size:13px; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+.alert-item { font-size:12px; color:#991b1b; padding:2px 0; display:flex; gap:6px; align-items:flex-start; }
+.alert-item::before { content:'→'; flex-shrink:0; }
+
+/* SECTION */
+.section-label { font-size:11px; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+
+/* KPI GRID */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px; }
+.kpi-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); }
+.kpi-card .kpi-label { font-size:11px; color:var(--text-muted); margin-bottom:6px; }
+.kpi-card .kpi-value { font-size:28px; font-weight:700; line-height:1; }
+.kpi-card .kpi-sub { font-size:11px; color:var(--text-secondary); margin-top:4px; }
+.kpi-card.red .kpi-value { color:var(--red); }
+.kpi-card.amber .kpi-value { color:var(--amber); }
+.kpi-card.green .kpi-value { color:var(--green); }
+.kpi-card.blue .kpi-value { color:var(--accent); }
+
+/* FUNNEL */
+.funnel-row { display:flex; align-items:center; flex-wrap:wrap; gap:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:24px; box-shadow:var(--shadow); }
+.funnel-step { flex:1; min-width:120px; text-align:center; padding:8px; }
+.funnel-step .f-label { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
+.funnel-step .f-value { font-size:22px; font-weight:700; color:var(--text-primary); }
+.funnel-step .f-rate { font-size:11px; color:var(--text-secondary); margin-top:2px; }
+.funnel-arrow { color:var(--text-muted); font-size:18px; padding:0 4px; flex-shrink:0; }
+
+/* ACTIONS */
+.actions-list { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:24px; box-shadow:var(--shadow); }
+.action-row { display:flex; align-items:baseline; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+.action-row:last-child { border-bottom:none; }
+.action-num { font-size:12px; font-weight:700; color:var(--red); min-width:22px; }
+.action-account { font-size:12px; font-weight:600; color:var(--text-primary); min-width:140px; }
+.action-text { font-size:12px; color:var(--text-secondary); flex:1; }
+
+/* TASK CARDS */
+.sa-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-bottom:24px; }
+.sa-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; box-shadow:var(--shadow); }
+.sa-card .sa-name { font-size:12px; font-weight:600; color:var(--text-primary); margin-bottom:8px; }
+.sa-card .sa-counts { font-size:11px; color:var(--text-secondary); margin-bottom:8px; display:flex; flex-wrap:wrap; gap:6px; }
+.sa-card a { font-size:11px; color:var(--accent); text-decoration:none; }
+.sa-card a:hover { text-decoration:underline; }
+
+/* STATUS PILLS */
+.pill { display:inline-block; padding:1px 7px; border-radius:99px; font-size:10px; font-weight:600; }
+.pill-red { background:#fee2e2; color:#991b1b; }
+.pill-amber { background:#fef3c7; color:#92400e; }
+.pill-green { background:#dcfce7; color:#14532d; }
+.pill-blue { background:#dbeafe; color:#1e3a8a; }
+.pill-gray { background:#f1f5f9; color:#475569; }
+
+/* ALL TASKS */
+.task-table { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); margin-bottom:24px; }
+.task-row { display:flex; gap:10px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--border); font-size:12px; }
 .task-row:last-child { border-bottom:none; }
-.tid { color:#8b7d6b; min-width:70px; font-size:11px; }
-.tname { flex:1; }
-.towner { color:#8b7d6b; font-size:11px; min-width:60px; text-align:right; }
-.status-完了 { color:#2a7a2a; }
-.status-進行中 { color:#1a5fa8; }
-.status-対応中 { color:#a07000; }
-.status-待機中 { color:#888888; }
-.status-ブロック中 { color:#c0392b; font-weight:bold; }
-.status-未着手 { color:#b0a898; }
-.status-継続 { color:#7b5ea7; }
-.blocker-box { border:1px solid #c0392b; background:#fff5f5; }
-.blocker-box .box-title { color:#c0392b; }
-.keizoku-box { border:1px solid #7b5ea7; background:#f8f5ff; }
-.keizoku-box .box-title { color:#7b5ea7; }
-.updated { color:#9b8e7e; font-size:11px; margin-bottom:12px; }
-.count-bar { display:flex; gap:12px; font-size:12px; margin-bottom:4px; flex-wrap:wrap; }
-.empty { color:#b0a898; font-size:12px; }
+.task-row:hover { background:#f8fafc; }
+.task-id { color:var(--text-muted); min-width:72px; font-size:11px; }
+.task-name { flex:1; }
+.task-status { min-width:64px; text-align:right; }
+.task-owner { color:var(--text-muted); min-width:54px; text-align:right; font-size:11px; }
+
+/* FOOTER LINKS */
+.footer-links { display:flex; gap:16px; flex-wrap:wrap; padding-top:16px; border-top:1px solid var(--border); margin-top:8px; }
+.footer-links a { font-size:12px; color:var(--accent); text-decoration:none; }
+.footer-links a:hover { text-decoration:underline; }
+
+.updated { font-size:11px; color:var(--text-muted); margin-bottom:20px; }
+.loading-text { color:var(--text-muted); font-size:12px; font-style:italic; }
+.empty-text { color:var(--text-muted); font-size:12px; text-align:center; padding:16px; }
 </style>
 </head>
 <body>
-<div class="nav">
-  <a href="cmo_index.html" class="active">■ 全体</a>
-  <a href="cmo_ad.html">▶ [SA-1] 広告</a>
-  <a href="cmo_sns.html">▶ [SA-2] SNS</a>
-  <a href="cmo_numbers.html">▶ [SA-3] 数値管理</a>
-  <a href="cmo_funnel.html">▶ [SA-4] 導線構築</a>
-  <a href="roas_by_creative.html">▶ ROAS分析</a>
-  <a href="creative_intelligence_dashboard.html">▶ CI分析</a>
-  <a href="creative_gallery_dashboard.html">▶ ギャラリー</a>
-  <a href="hook_dashboard.html">▶ Hook分析</a>
-  <a href="retention_dashboard.html">▶ Retention</a>
+
+<div class="topbar">
+  <span class="brand">CMO</span>
+  <a href="cmo_index.html" class="active">全体</a>
+  <a href="cmo_ad.html">広告</a>
+  <a href="cmo_sns.html">SNS</a>
+  <a href="roas_by_creative.html">ROAS分析</a>
+  <a href="creative_intelligence_dashboard.html">AI分析</a>
+  <a href="creative_gallery_dashboard.html">クリエイティブ一覧</a>
+  <a href="hook_dashboard.html">Hook分析</a>
+  <a href="retention_dashboard.html">Retention</a>
 </div>
 
-<h1>CMOハーネス 全体ダッシュボード</h1>
+<div class="main">
 
-<div class="section" style="background:#fff8f0;border:1px solid #e0c090;padding:12px;margin-bottom:16px;">
-  <div class="box-title" style="color:#b05000;">⚡ Executive KPI（5分判断）</div>
-  <div id="exec-kpi" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
-    <span style="color:#9b8e7e;font-size:11px;">読込中...</span>
+  <div class="updated" id="updated">データを読み込み中…</div>
+
+  <!-- ALERT BANNER (shown only if alerts exist) -->
+  <div class="alert-banner" id="alert-banner" style="display:none">
+    <div class="alert-head">⚠️ 今すぐ確認が必要な問題 (<span id="alert-count">0</span>件)</div>
+    <div id="alert-list"></div>
   </div>
-  <div id="exec-funnel" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;"></div>
-  <div id="exec-bottleneck" style="margin-top:10px;padding:8px;background:#fff0e8;border-left:3px solid #c05000;font-size:12px;"></div>
-  <div id="exec-actions" style="margin-top:8px;"></div>
-</div>
 
-<div class="section">
-  <div class="box-title">━ Meta広告 KPI（直近7日）</div>
-  <div id="meta-kpi" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;">
-    <span style="color:#9b8e7e;font-size:11px;">読込中...</span>
+  <!-- TOP KPI -->
+  <div class="section-label">広告パフォーマンス（直近7日）</div>
+  <div class="kpi-grid" id="kpi-grid">
+    <div class="kpi-card blue"><div class="kpi-label">広告費合計</div><div class="kpi-value loading-text" id="k-spend">—</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">リード数</div><div class="kpi-value loading-text" id="k-leads">—</div><div class="kpi-sub">Meta + Google</div></div>
+    <div class="kpi-card" id="kc-cpl"><div class="kpi-label">CPL（リード単価）</div><div class="kpi-value" id="k-cpl">—</div><div class="kpi-sub">目標: ¥1,500以下</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">メルマガ読者</div><div class="kpi-value" id="k-subscribers">—</div></div>
   </div>
-</div>
 
-<div class="section" style="margin-top:16px;">
-  <div class="box-title">━ Google Ads KPI（直近7日）</div>
-  <div id="gads-kpi" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;">
-    <span style="color:#9b8e7e;font-size:11px;">読込中...</span>
+  <!-- FUNNEL -->
+  <div class="section-label">ファネル転換（直近30日）</div>
+  <div class="funnel-row" id="funnel-row">
+    <div class="funnel-step">
+      <div class="f-label">LP訪問</div>
+      <div class="f-value" id="f-pv">—</div>
+      <div class="f-rate">セッション</div>
+    </div>
+    <div class="funnel-arrow">›</div>
+    <div class="funnel-step">
+      <div class="f-label">セミナー申込</div>
+      <div class="f-value" id="f-reg">—</div>
+      <div class="f-rate">LP CVR: <span id="f-cvr">—</span></div>
+    </div>
+    <div class="funnel-arrow">›</div>
+    <div class="funnel-step">
+      <div class="f-label">個別相談</div>
+      <div class="f-value" id="f-consult">—</div>
+      <div class="f-rate">相談率: <span id="f-consult-rate">—</span></div>
+    </div>
   </div>
-</div>
 
-<div class="section" style="margin-top:16px;">
-  <div class="box-title">━ YouTube チャンネル</div>
-  <div id="yt-kpi" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;">
-    <span style="color:#9b8e7e;font-size:11px;">読込中...</span>
+  <!-- OPTIMIZATION ACTIONS -->
+  <div class="section-label">今週の改善優先アクション</div>
+  <div class="actions-list" id="actions-list">
+    <div class="loading-text">読み込み中…</div>
   </div>
-</div>
 
-<div class="updated" id="updated">読込中...</div>
+  <!-- SUB-AGENT SUMMARY -->
+  <div class="section-label">サブエージェント別 タスク状況</div>
+  <div class="sa-grid" id="sa-cards"></div>
 
-<div class="section">
-  <div class="box-title">━ 全体サマリ</div>
-  <div class="count-bar" id="global-counts"></div>
-</div>
-
-<div class="summary-grid" id="sa-cards"></div>
-
-<div class="section" id="blocker-section" style="display:none">
-  <div class="box blocker-box">
-    <div class="box-title">🔴 ブロッカー（要対応）</div>
-    <div id="blockers"></div>
+  <!-- ALL TASKS -->
+  <div class="section-label">全タスク一覧</div>
+  <div class="task-table" id="task-table">
+    <div class="empty-text">読み込み中…</div>
   </div>
-</div>
 
-<div class="section" id="auto-section" style="display:none">
-  <div class="box">
-    <div class="box-title">🤖 Claude 自律実行候補</div>
-    <div id="auto-candidates"></div>
+  <div class="footer-links">
+    <a href="https://docs.google.com/spreadsheets/d/1OS6nFrjo39AHvE5rI1lPmOCpRz4zv0nwdQm2SW6fmvc/edit?gid=1948699085" target="_blank">📋 タスク進捗シート</a>
+    <a href="https://docs.google.com/spreadsheets/d/1OS6nFrjo39AHvE5rI1lPmOCpRz4zv0nwdQm2SW6fmvc/edit?gid=939287618" target="_blank">🤖 エージェント構造</a>
   </div>
-</div>
-
-<div class="section">
-  <div class="box">
-    <div class="box-title">━ 全タスク一覧（継続除く）</div>
-    <div id="all-tasks"></div>
-  </div>
-</div>
-
-<div class="section" id="keizoku-section" style="display:none">
-  <div class="box keizoku-box">
-    <div class="box-title">🔁 継続タスク（定期実行中）</div>
-    <div id="keizoku-tasks"></div>
-  </div>
-</div>
-
-<div style="margin-top:16px; color:#9b8e7e; font-size:11px;">
-  📋 <a href="https://docs.google.com/spreadsheets/d/1OS6nFrjo39AHvE5rI1lPmOCpRz4zv0nwdQm2SW6fmvc/edit?gid=1948699085" target="_blank">タスク進捗シート</a>
-  　　🤖 <a href="https://docs.google.com/spreadsheets/d/1OS6nFrjo39AHvE5rI1lPmOCpRz4zv0nwdQm2SW6fmvc/edit?gid=939287618" target="_blank">エージェント×サブエージェント構造</a>
 </div>
 
 <script>
-// Meta Ads KPIパネル
-fetch('meta_ads_latest.json?_='+Date.now()).then(r=>r.json()).then(m=>{
-  const s = m.summary || {};
-  const fmt = n => n==null ? '-' : '¥'+Math.round(n).toLocaleString('ja-JP');
-  const alerts = (m.alerts||[]).length;
-  const stopped = (s.stopped_accounts||[]).length;
-  const kpiEl = document.getElementById('meta-kpi');
-  const cards = [
-    ['広告費(7d)', fmt(s.total_spend_7d)],
-    ['リード(7d)', (s.total_leads_7d||0)+'件'],
-    ['CPL(7d)', fmt(s.total_cpl_7d)],
-    ['平均CPM', fmt(s.avg_cpm_7d)],
-    ['停止アカウント', stopped+'件', stopped>0?'#c0392b':'inherit'],
-    ['アラート', alerts+'件', alerts>0?'#c0392b':'inherit'],
-  ];
-  kpiEl.innerHTML = cards.map(([k,v,c])=>`<div class="sa-card" style="min-width:110px;text-align:center"><div style="color:#6b6355;font-size:10px">${k}</div><div style="font-weight:bold;font-size:14px;color:${c||'#1a5fa8'};margin-top:2px">${v}</div></div>`).join('');
-  // アラート一覧
-  if(alerts>0){
-    kpiEl.innerHTML += '<div style="width:100%;margin-top:8px;padding:6px;background:#fff5f5;border:1px solid #e0b0b0;font-size:11px;color:#c0392b">'+(m.alerts||[]).join('<br>')+'</div>';
-  }
-  // 集計日表示
-  if(m.date){
-    kpiEl.innerHTML += '<div style="width:100%;margin-top:4px;color:#9b8e7e;font-size:10px">集計日: '+m.date+'</div>';
-  }
-}).catch(()=>{
-  const kpiEl = document.getElementById('meta-kpi');
-  if(kpiEl) kpiEl.innerHTML = '<span style="color:#9b8e7e;font-size:11px;">データ取得エラー（meta_ads_latest.json）</span>';
-});
+const fmt = n => n == null ? '—' : '¥' + Math.round(n).toLocaleString('ja-JP');
+const num = n => n == null ? '—' : Math.round(n).toLocaleString('ja-JP');
+const pct = n => n == null ? '—' : n + '%';
 
-// Google Ads KPIパネル
-fetch('google_ads_latest.json?_='+Date.now()).then(r=>r.json()).then(g=>{
-  const s = g.summary || {};
-  const fmt = n => n==null ? '-' : '¥'+Math.round(n).toLocaleString('ja-JP');
-  const alerts = (g.alerts||[]).length;
-  const el = document.getElementById('gads-kpi');
-  const cards = [
-    ['広告費(7d)', fmt(s.total_spend_7d)],
-    ['CV数(7d)', (s.total_conversions_7d||0).toLocaleString('ja-JP')+'件'],
-    ['CPA(7d)', fmt(s.total_cpa_7d)],
-    ['アラート', alerts+'件', alerts>0?'#c0392b':'inherit'],
-  ];
-  el.innerHTML = cards.map(([k,v,c])=>`<div class="sa-card" style="min-width:110px;text-align:center"><div style="color:#6b6355;font-size:10px">${k}</div><div style="font-weight:bold;font-size:14px;color:${c||'#1a5fa8'};margin-top:2px">${v}</div></div>`).join('');
-  if(alerts>0){
-    el.innerHTML += '<div style="width:100%;margin-top:8px;padding:6px;background:#fff5f5;border:1px solid #e0b0b0;font-size:11px;color:#c0392b">'+(g.alerts||[]).join('<br>')+'</div>';
-  }
-  if(g.date){
-    el.innerHTML += '<div style="width:100%;margin-top:4px;color:#9b8e7e;font-size:10px">集計日: '+g.date+'</div>';
-  }
-}).catch(()=>{});
-
-// YouTube チャンネルパネル
-fetch('youtube_analytics_latest.json?_='+Date.now()).then(r=>r.json()).then(y=>{
-  const el = document.getElementById('yt-kpi');
-  const rv = (y.recent_videos||[])[0];
-  const videoLink = rv
-    ? `<a href="https://www.youtube.com/watch?v=${rv.video_id||''}" target="_blank" style="font-size:10px;color:#1a5fa8;word-break:break-all;">${rv.title||'（タイトル不明）'} (${rv.published_at||''})</a>`
-    : '<span style="font-size:10px;color:#9b8e7e;">データなし</span>';
-  const cards = [
-    ['登録者数', (y.subscribers||0).toLocaleString('ja-JP')+'人'],
-    ['総再生回数', (y.total_views||0).toLocaleString('ja-JP')+'回'],
-    ['動画数', (y.video_count||0).toLocaleString('ja-JP')+'本'],
-  ];
-  el.innerHTML = cards.map(([k,v])=>`<div class="sa-card" style="min-width:110px;text-align:center"><div style="color:#6b6355;font-size:10px">${k}</div><div style="font-weight:bold;font-size:14px;color:#1a5fa8;margin-top:2px">${v}</div></div>`).join('');
-  el.innerHTML += `<div class="sa-card" style="min-width:200px;flex:1"><div style="color:#6b6355;font-size:10px;margin-bottom:4px">最新動画</div>${videoLink}</div>`;
-}).catch(()=>{});
-
-const ICON = {'完了':'✅','進行中':'🔄','対応中':'🔶','待機中':'🔵','ブロック中':'🔴','未着手':'⬜','継続':'🔁'};
-const SA_PAGES = {
-  'AD（広告）':'cmo_ad.html',
-  'SNS / YouTube':'cmo_sns.html','SNS / Instagram':'cmo_sns.html',
-  'SNS / Threads':'cmo_sns.html','SNS / 毒親':'cmo_sns.html',
-  '数値管理':'cmo_numbers.html',
-  '導線構築自動化':'cmo_funnel.html',
-  '自動化基盤（CMO全体）':'cmo_index.html',
+const STATUS_MAP = {
+  '完了': { label: '完了', cls: 'pill-green' },
+  '進行中': { label: '進行中', cls: 'pill-blue' },
+  '対応中': { label: '対応中', cls: 'pill-amber' },
+  '待機中': { label: '待機中', cls: 'pill-gray' },
+  'ブロック中': { label: '要対応', cls: 'pill-red' },
+  '未着手': { label: '未着手', cls: 'pill-gray' },
+  '継続': { label: '継続', cls: 'pill-blue' },
 };
-function icon(s){ for(const[k,v] of Object.entries(ICON)) if(s&&s.includes(k)) return v; return '❓'; }
-function taskRow(t){
-  const ic=icon(t.status);
-  const cls='status-'+(Object.keys(ICON).find(k=>t.status&&t.status.includes(k))||'未着手');
-  return `<div class="task-row"><span class="tid">${t.id}</span><span class="tname ${cls}">${ic} ${t.name}</span><span class="towner">${t.owner||''}</span></div>`;
+
+function statusPill(s) {
+  for (const [k, v] of Object.entries(STATUS_MAP)) {
+    if (s && s.includes(k)) return `<span class="pill ${v.cls}">${v.label}</span>`;
+  }
+  return `<span class="pill pill-gray">${s || '—'}</span>`;
 }
-function countBar(s){
-  const parts=[];
-  if(s['完了'])      parts.push(`<span class="status-完了">✅${s['完了']}</span>`);
-  if(s['進行中'])    parts.push(`<span class="status-進行中">🔄${s['進行中']}</span>`);
-  if(s['対応中'])    parts.push(`<span class="status-対応中">🔶${s['対応中']}</span>`);
-  if(s['待機中'])    parts.push(`<span class="status-待機中">🔵${s['待機中']}</span>`);
-  if(s['ブロック中']) parts.push(`<span class="status-ブロック中">🔴${s['ブロック中']}</span>`);
-  if(s['未着手'])    parts.push(`<span class="status-未着手">⬜${s['未着手']}</span>`);
-  if(s['継続'])      parts.push(`<span class="status-継続">🔁${s['継続']}</span>`);
+
+function countSummary(counts) {
+  const parts = [];
+  if (counts['ブロック中']) parts.push(`<span class="pill pill-red">要対応 ${counts['ブロック中']}</span>`);
+  if (counts['進行中']) parts.push(`<span class="pill pill-blue">進行中 ${counts['進行中']}</span>`);
+  if (counts['完了']) parts.push(`<span class="pill pill-green">完了 ${counts['完了']}</span>`);
+  if (counts['未着手']) parts.push(`<span class="pill pill-gray">未着手 ${counts['未着手']}</span>`);
   return parts.join(' ');
 }
-fetch('cmo_data.json?_='+Date.now()).then(r=>r.json()).then(d=>{
-  document.getElementById('updated').textContent='更新: '+d.updated;
-  document.getElementById('global-counts').innerHTML=countBar(d.summary||{});
-  const cards=document.getElementById('sa-cards');
-  for(const[name,sa] of Object.entries(d.subagents||{})){
-    if(!sa.tasks||!sa.tasks.length) continue;
-    const page=SA_PAGES[name]||'cmo_index.html';
-    const div=document.createElement('div');
-    div.className='sa-card';
-    div.innerHTML=`<div class="name">${name}</div><div class="counts">${countBar(sa.counts||{})}</div><a href="${page}">→ 詳細</a>`;
-    cards.appendChild(div);
-  }
-  if(d.blockers&&d.blockers.length){
-    document.getElementById('blocker-section').style.display='';
-    document.getElementById('blockers').innerHTML=d.blockers.map(taskRow).join('');
-  }
-  if(d.auto_candidates&&d.auto_candidates.length){
-    document.getElementById('auto-section').style.display='';
-    document.getElementById('auto-candidates').innerHTML=d.auto_candidates.map(taskRow).join('');
-  }
-  const allTasks=[],keizoku=[];
-  for(const sa of Object.values(d.subagents||{})){
-    for(const t of (sa.tasks||[])){
-      if(t.status&&t.status.includes('継続')) keizoku.push(t);
-      else allTasks.push(t);
-    }
-  }
-  document.getElementById('all-tasks').innerHTML=allTasks.map(taskRow).join('')||'<span class="empty">タスクなし</span>';
-  if(keizoku.length){
-    document.getElementById('keizoku-section').style.display='';
-    document.getElementById('keizoku-tasks').innerHTML=keizoku.map(taskRow).join('');
-  }
-}).catch(e=>{document.getElementById('updated').textContent='エラー: '+e;});
 
-// Executive Dashboard — 売上/ROAS/ファネル/ボトルネック
+// ① 広告 + アラート
 (async () => {
-  const fmt = n => n==null ? '-' : '¥'+Math.round(n).toLocaleString('ja-JP');
-  const pct = n => n==null ? '-' : n+'%';
-  const clr = (val, low, hi) => val==null ? '#6b6355' : val>=hi ? '#2a7a2a' : val>=low ? '#b07000' : '#c0392b';
+  try {
+    const r = await fetch('../analytics/roas_latest.json?_=' + Date.now()).then(x => x.json());
+    document.getElementById('k-spend').textContent = fmt(r.total_spend_7d);
+    document.getElementById('k-leads').textContent = num(r.total_leads_7d) + '件';
 
-  let roas = {}, utage = {};
-  try { roas = await fetch('../analytics/roas_optimization_latest.json?_='+Date.now()).then(r=>r.json()); } catch(e){}
-  try { utage = await fetch('../analytics/utage_kpi_latest.json?_='+Date.now()).then(r=>r.json()); } catch(e){}
-
-  const bl = roas.blended || {};
-  const fu = roas.funnel_diagnosis || {};
-  const stp = utage.seminar_tp || {};
-  const em = utage.email_list || {};
-
-  // 上段KPI — 広告費/CPL/CPS/CPO/ROAS
-  const kpis = [
-    ['総広告費(7d)',   bl.total_spend_7d,   null,    null,   'cost'],
-    ['Meta CPL',      bl.meta_cpl,          2000,    1000,   'inv'],
-    ['LP CVR',        stp.lp_registration_rate, 10, 15,     'pct'],
-    ['セミナー申込',   stp.seminar_registrations, null, null, 'num'],
-    ['メルリスト',     em.ck_total_subscribers, null, null,  'num'],
-  ];
-
-  document.getElementById('exec-kpi').innerHTML = kpis.map(([label, val, low, hi, type]) => {
-    let disp = '-', color = '#6b6355';
-    if (val != null) {
-      if (type === 'cost') { disp = fmt(val); color = '#1a5fa8'; }
-      else if (type === 'inv') { disp = fmt(val); color = low ? clr(val, hi, low) : '#1a5fa8'; }
-      else if (type === 'pct') { disp = pct(val); color = low ? clr(val, low, hi) : '#1a5fa8'; }
-      else { disp = Math.round(val).toLocaleString('ja-JP') + (type==='rate'?'%':''); color = '#1a5fa8'; }
+    const cpl = r.blended_cpl;
+    const cplEl = document.getElementById('k-cpl');
+    const cplCard = document.getElementById('kc-cpl');
+    cplEl.textContent = fmt(cpl);
+    if (cpl != null) {
+      cplCard.classList.add(cpl <= 1500 ? 'green' : cpl <= 2000 ? 'amber' : 'red');
     }
-    return `<div class="sa-card" style="min-width:110px;text-align:center">
-      <div style="color:#6b6355;font-size:10px">${label}</div>
-      <div style="font-weight:bold;font-size:14px;color:${color};margin-top:2px">${disp}</div>
-    </div>`;
-  }).join('');
 
-  // ファネル転換率行
-  const consult_rate = fu.consult_rate || stp.consultation_count;
-  const funnelKpis = [
-    ['セミナー参加率', fu.seminar_attendance_rate, 30, 50],
-    ['個別相談率', fu.consult_rate, 20, 35],
-    ['成約率', fu.close_rate, 15, 25],
-  ];
-  const hasAny = funnelKpis.some(([,v]) => v != null);
-  if (hasAny) {
-    document.getElementById('exec-funnel').innerHTML = funnelKpis.map(([label, val, low, hi]) =>
-      `<div class="sa-card" style="min-width:110px;text-align:center">
-        <div style="color:#6b6355;font-size:10px">${label}</div>
-        <div style="font-weight:bold;font-size:14px;color:${clr(val,low,hi)};margin-top:2px">${pct(val)}</div>
-      </div>`
-    ).join('');
+    const alerts = r.alerts || [];
+    if (alerts.length) {
+      document.getElementById('alert-banner').style.display = '';
+      document.getElementById('alert-count').textContent = alerts.length;
+      document.getElementById('alert-list').innerHTML = alerts.map(a =>
+        `<div class="alert-item">${a}</div>`).join('');
+    }
+
+    const actions = (r.optimization_actions || []).slice(0, 5);
+    const actEl = document.getElementById('actions-list');
+    if (actions.length) {
+      actEl.innerHTML = actions.map(a =>
+        `<div class="action-row">
+          <span class="action-num">#${a.priority}</span>
+          <span class="action-account">${a.account || ''}</span>
+          <span class="action-text">${a.action || ''}</span>
+        </div>`).join('');
+    } else {
+      actEl.innerHTML = '<div class="empty-text">優先アクションなし</div>';
+    }
+  } catch (e) {
+    document.getElementById('actions-list').innerHTML = '<div class="empty-text">データ取得エラー (roas_latest.json)</div>';
   }
+})();
 
-  // ボトルネック
-  const bn = roas.bottleneck || {};
-  const bnEl = document.getElementById('exec-bottleneck');
-  if (bn.label) {
-    bnEl.innerHTML = `<strong>🚨 最重要ボトルネック: ${bn.label}</strong><br><span style="font-size:11px">${bn.description || ''}</span>`;
-  } else {
-    bnEl.style.display = 'none';
-  }
+// ② UTAGE ファネル + メルリスト
+(async () => {
+  try {
+    const u = await fetch('../analytics/utage_kpi_latest.json?_=' + Date.now()).then(x => x.json());
+    const stp = u.seminar_tp || {};
+    const em = u.email_list || {};
+    const fs = u.funnel_stats || {};
+    const seminar = fs['セミナーTP'] || {};
 
-  // 改善アクション TOP3
-  const actions = (roas.top_actions || []).slice(0,3);
-  const acEl = document.getElementById('exec-actions');
-  if (actions.length) {
-    acEl.innerHTML = '<div style="font-size:11px;color:#6b6355;margin-bottom:4px">今週の改善優先順位</div>' +
-      actions.map((a, i) => `<div style="font-size:11px;padding:3px 0;border-bottom:1px solid #f0ebe0">
-        <strong style="color:#b05000">#${i+1}</strong> ${a.action || a}
-      </div>`).join('');
+    document.getElementById('k-subscribers').textContent = num(em.ck_total_subscribers) + '人';
+    document.getElementById('f-pv').textContent = num(seminar.pv);
+    document.getElementById('f-reg').textContent = num(seminar.registration_count) + '件';
+    document.getElementById('f-cvr').textContent = pct(seminar.registration_rate);
+    document.getElementById('f-consult').textContent = num(stp.consultation_count) + '件';
+    if (stp.seminar_registrations && stp.consultation_count != null) {
+      const cr = stp.seminar_registrations > 0
+        ? Math.round(stp.consultation_count / stp.seminar_registrations * 100) : 0;
+      document.getElementById('f-consult-rate').textContent = cr + '%';
+    }
+  } catch (e) {}
+})();
+
+// ③ タスク一覧
+(async () => {
+  try {
+    const d = await fetch('cmo_data.json?_=' + Date.now()).then(x => x.json());
+    document.getElementById('updated').textContent = '最終更新: ' + (d.updated || '不明');
+
+    const cards = document.getElementById('sa-cards');
+    const SA_PAGES = {
+      'AD（広告）': 'cmo_ad.html',
+      'SNS / YouTube': 'cmo_sns.html',
+      'SNS / Instagram': 'cmo_sns.html',
+      'SNS / Threads': 'cmo_sns.html',
+      'SNS / 毒親': 'cmo_sns.html',
+      '数値管理': 'cmo_numbers.html',
+      '導線構築自動化': 'cmo_funnel.html',
+    };
+    for (const [name, sa] of Object.entries(d.subagents || {})) {
+      if (!sa.tasks || !sa.tasks.length) continue;
+      const page = SA_PAGES[name] || 'cmo_index.html';
+      const div = document.createElement('div');
+      div.className = 'sa-card';
+      div.innerHTML = `<div class="sa-name">${name}</div>
+        <div class="sa-counts">${countSummary(sa.counts || {})}</div>
+        <a href="${page}">詳細を見る →</a>`;
+      cards.appendChild(div);
+    }
+
+    const allTasks = [];
+    for (const sa of Object.values(d.subagents || {})) {
+      for (const t of (sa.tasks || [])) allTasks.push(t);
+    }
+
+    const taskTable = document.getElementById('task-table');
+    if (allTasks.length) {
+      taskTable.innerHTML = allTasks.map(t =>
+        `<div class="task-row">
+          <span class="task-id">${t.id || ''}</span>
+          <span class="task-name">${t.name || ''}</span>
+          <span class="task-status">${statusPill(t.status)}</span>
+          <span class="task-owner">${t.owner || ''}</span>
+        </div>`).join('');
+    } else {
+      taskTable.innerHTML = '<div class="empty-text">タスクなし</div>';
+    }
+  } catch (e) {
+    document.getElementById('task-table').innerHTML = '<div class="empty-text">データ取得エラー (cmo_data.json)</div>';
   }
 })();
 </script>
