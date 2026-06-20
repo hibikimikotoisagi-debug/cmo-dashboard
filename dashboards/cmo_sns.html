@@ -1,50 +1,70 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head><script src="/cmo-dashboard/config.js"></script>
+<head>
 <meta charset="UTF-8">
-<title>[SA-2] SNS ダッシュボード</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SNS / YouTube サブエージェント</title>
+<script src="config.js"></script>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { background:#f7f4ee; color:#2c2a26; font-family:'Courier New',monospace; font-size:13px; padding:16px; }
-a { color:#1a5fa8; text-decoration:none; }
-a:hover { text-decoration:underline; }
-h1 { font-size:15px; color:#1a1a1a; border-bottom:1px solid #d4c9b0; padding-bottom:6px; margin-bottom:12px; }
-.nav { background:#eee8da; border:1px solid #d4c9b0; padding:8px 12px; margin-bottom:16px; display:flex; gap:16px; flex-wrap:wrap; }
-.nav a { color:#6b6355; }
-.nav a.active, .nav a:hover { color:#1a5fa8; font-weight:bold; }
-.channel-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:12px; margin-bottom:12px; }
-.box { background:#ffffff; border:1px solid #d4c9b0; padding:12px; }
-.box-title { color:#3d6b38; font-weight:bold; margin-bottom:8px; border-bottom:1px solid #e8e0d0; padding-bottom:4px; }
-.blocker-box { border:1px solid #c0392b; background:#fff5f5; margin-bottom:12px; }
-.blocker-box .box-title { color:#c0392b; }
-.keizoku-box { border:1px solid #7b5ea7; background:#f8f5ff; margin-top:12px; }
-.keizoku-box .box-title { color:#7b5ea7; }
-.task-row { padding:3px 0; border-bottom:1px solid #f0ebe0; display:flex; gap:6px; align-items:baseline; }
-.task-row:last-child { border-bottom:none; }
-.tid { color:#8b7d6b; min-width:70px; font-size:11px; }
-.tname { flex:1; font-size:12px; }
-.towner { color:#8b7d6b; font-size:10px; min-width:50px; text-align:right; }
-.status-完了 { color:#2a7a2a; }
-.status-進行中 { color:#1a5fa8; }
-.status-対応中 { color:#a07000; }
-.status-待機中 { color:#888888; }
-.status-ブロック中 { color:#c0392b; font-weight:bold; }
-.status-未着手 { color:#b0a898; }
-.status-継続 { color:#7b5ea7; }
-.updated { color:#9b8e7e; font-size:11px; margin-bottom:12px; }
-.count-mini { font-size:10px; color:#6b6355; margin-bottom:6px; }
-.empty { color:#b0a898; font-size:11px; }
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#f8fafc;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Hiragino Sans',sans-serif;font-size:14px;}
+.topbar{background:#1e293b;padding:0 16px;display:flex;align-items:center;gap:0;height:44px;overflow-x:auto;white-space:nowrap;}
+.topbar .brand{font-size:13px;font-weight:700;color:#f1f5f9;margin-right:20px;flex-shrink:0;}
+.topbar a{color:#94a3b8;font-size:12px;padding:0 12px;height:44px;line-height:44px;display:inline-block;border-bottom:2px solid transparent;text-decoration:none;}
+.topbar a:hover,.topbar a.active{color:#f1f5f9;border-bottom-color:#3b82f6;}
+.main{max-width:1100px;margin:0 auto;padding:20px 16px;}
+.page-title{font-size:18px;font-weight:500;color:#0f172a;margin-bottom:4px;}
+.section{margin-bottom:24px;}
+.box{background:#fff;border:0.5px solid #e2e8f0;padding:14px;margin-bottom:8px;border-radius:8px;}
+.box-title{color:#0f172a;font-weight:500;margin-bottom:10px;padding-bottom:8px;border-bottom:0.5px solid #e2e8f0;font-size:13px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;}
+.kpi-card{background:#fff;border:0.5px solid #e2e8f0;padding:12px;text-align:center;border-radius:8px;}
+.kpi-label{color:#64748b;font-size:10px;margin-bottom:3px;}
+.kpi-val{font-weight:500;font-size:22px;color:#2563eb;margin-top:2px;}
+.kpi-val.warn{color:#d97706;}.kpi-val.danger{color:#dc2626;}.kpi-val.good{color:#16a34a;}
+.bar-wrap{margin-top:6px;background:#e2e8f0;height:5px;border-radius:3px;overflow:hidden;}
+.bar{height:100%;background:#2563eb;border-radius:3px;transition:width 0.4s;}
+.bar.warn{background:#d97706;}.bar.danger{background:#dc2626;}.bar.good{background:#16a34a;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{background:#f8fafc;color:#475569;padding:8px 10px;text-align:left;border-bottom:0.5px solid #e2e8f0;font-weight:500;}
+td{padding:7px 10px;border-bottom:0.5px solid #f1f5f9;}
+tr:hover td{background:#f8fafc;}
+.tag{display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:500;}
+.tag-video{background:#dbeafe;color:#1e3a8a;}.tag-image{background:#dcfce7;color:#14532d;}
+.tag-meta{background:#dbeafe;color:#1e3a8a;}.tag-win{background:#dcfce7;color:#14532d;}
+.tag-lose{background:#fee2e2;color:#991b1b;}.tag-other{background:#f1f5f9;color:#475569;}
+.alert-box{background:#fef2f2;border:0.5px solid #fca5a5;padding:10px;font-size:12px;color:#dc2626;margin-bottom:10px;border-radius:6px;}
+.pending{color:#94a3b8;font-size:12px;text-align:center;padding:20px;}
+.score-bar{display:flex;align-items:center;gap:8px;}
+.score-num{min-width:50px;text-align:right;font-weight:500;}
+.status-bar{font-size:12px;color:#64748b;margin-bottom:16px;}
+.task-row{display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:0.5px solid #f1f5f9;font-size:12px;}
+.task-row:last-child{border-bottom:none;}
+.task-id{color:#94a3b8;min-width:72px;font-size:11px;}.task-name{flex:1;}
+.pill{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:500;}
+.pill-red{background:#fee2e2;color:#991b1b;}.pill-blue{background:#dbeafe;color:#1e3a8a;}
+.pill-green{background:#dcfce7;color:#14532d;}.pill-amber{background:#fef3c7;color:#92400e;}
+.pill-gray{background:#f1f5f9;color:#475569;}
+.sa-card{background:#fff;border:0.5px solid #e2e8f0;padding:14px;border-radius:8px;}
+.sa-name{font-size:12px;font-weight:500;color:#0f172a;margin-bottom:8px;}
+.sa-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px;}
+.count-bar{display:flex;gap:8px;font-size:12px;margin-bottom:4px;flex-wrap:wrap;}
+.empty{color:#94a3b8;font-size:12px;}
+select{border:0.5px solid #e2e8f0;background:#fff;padding:5px 10px;font-size:12px;border-radius:6px;font-family:inherit;}
+.col-filter button{background:#f1f5f9;border:0.5px solid #e2e8f0;padding:4px 12px;cursor:pointer;font-size:11px;border-radius:99px;font-family:inherit;}
+.col-filter button.active{background:#2563eb;color:#fff;border-color:#2563eb;}
 </style>
 </head>
 <body>
-<div class="nav">
-  <a href="cmo_index.html">■ 全体</a>
-  <a href="cmo_ad.html">▶ [SA-1] 広告</a>
-  <a href="cmo_sns.html" class="active">▶ [SA-2] SNS</a>
-  <a href="cmo_numbers.html">▶ [SA-3] 数値管理</a>
-  <a href="cmo_funnel.html">▶ [SA-4] 導線構築</a>
+<div class="topbar">
+  <span class="brand">CMO</span>
+  <a href="cmo_index.html">全体</a>
+  <a href="cmo_ad.html">広告</a>
+  <a href="cmo_sns.html" class="active">SNS</a>
+  <a href="cmo_numbers.html">数値管理</a>
 </div>
-<h1>[SA-2] SNS サブエージェント</h1>
+<div class="main">
+<div class="page-title">SNS / YouTube サブエージェント</div>
 <div class="updated" id="updated">読込中...</div>
 <div id="blocker-section" style="display:none">
   <div class="box blocker-box">
@@ -104,5 +124,6 @@ fetch('cmo_data.json?_='+Date.now()).then(r=>r.json()).then(d=>{
   }
 }).catch(e=>{document.getElementById('updated').textContent='エラー: '+e;});
 </script>
+</div>
 </body>
 </html>
